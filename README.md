@@ -1,12 +1,18 @@
-# Patchsentry — automated product QA
+# Patchsentry
 
-Patchsentry helps student teams, research-software maintainers and small product teams check **pull requests, CI builds and complete releases**. This repository contains its QA engine: trusted tests produce revision-bound outcomes, evidence and suggested fixes while the connected product's source stays read-only.
+**Automated QA for pull requests, CI builds, and complete product releases.**
 
-[Start here: reproduce a defect without an account or API key](docs/reviewer-quickstart.md) · [Product website](https://patchsentry.vercel.app) · [Illustrative dashboard demo](https://patchsentry.vercel.app/demo)
+[![Bot verification](https://github.com/Vaidehi2510/QA-testbot/actions/workflows/check.yml/badge.svg)](https://github.com/Vaidehi2510/QA-testbot/actions/workflows/check.yml)
+[![Node.js 24](https://img.shields.io/badge/Node.js-24-5FA04E?logo=nodedotjs&logoColor=white)](package.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Review the project first
+Patchsentry combines test execution, browser checks, optional AI investigation, and revision-bound evidence to help individuals and teams assess changes before shipping. **This repository is the QA engine.** Product source stays read-only; tests, reports, and suggested fixes live in the bot workspace.
 
-Use Node.js **24**, then run:
+[Website](https://patchsentry.vercel.app) · [Sample dashboard](https://patchsentry.vercel.app/demo) · [Reviewer guide](docs/reviewer-quickstart.md) · [Contributing](CONTRIBUTING.md)
+
+## Quick start
+
+Reproduce a real assertion failure without an account, API key, Docker, or browser installation. Use **Node.js 24** and npm; Git and access to the public npm registry are needed for the initial setup.
 
 ```sh
 git clone https://github.com/Vaidehi2510/QA-testbot.git
@@ -15,259 +21,125 @@ npm ci --ignore-scripts
 npm run demo
 ```
 
-The demo runs real tests against temporary copies of a synthetic shipping application. The healthy version passes four tests; an intentionally introduced `$100` boundary defect fails one. Look for `expected: 0`, `actual: 5` and the final `Demo checks passed` message. GitHub, Slack and Drive operations are explicitly mocked; no accounts, keys, external writes or model calls are used. Dependency installation requires access to the public npm registry. See the [reviewer quick-start](docs/reviewer-quickstart.md) for expected output, interpretation, an optional mocked AI demonstration and the full verification recipe.
+The demo tests temporary copies of a synthetic shipping application:
 
-## Three repositories, one project
+| Scenario | Expected result |
+| --- | --- |
+| Healthy application | 4 tests pass. |
+| Introduced defect: `amount >= 100` becomes `amount > 100` | 3 tests pass, 1 fails: an order of exactly $100 incorrectly incurs $5 shipping. |
+| New revision | Previous results and decisions cannot approve the new code. |
+
+Look for `expected: 0`, `actual: 5`, and the final `Demo checks passed` message. The demo exits successfully **because it caught the intended defect**; the defective application’s QA outcome remains failed.
+
+The assertions execute for real. GitHub, Slack, Drive, and the sample owner response are mocked; no external writes or model calls occur. Temporary fixture state is cleaned up. The [reviewer guide](docs/reviewer-quickstart.md) explains the output and distinguishes real execution from simulation. The website’s sample dashboard uses illustrative data.
+
+## What you can test
+
+| Capability | What the engine does | Setup and scope |
+| --- | --- | --- |
+| Pull requests | Builds a check plan from committed changes, requirements, and existing tests; invalidates evidence when inputs change. | [Trusted runner configuration](docs/github-controller.md#planning-and-supported-tests) |
+| Unit and integration tests | Executes configured Node, npm/TAP, Vitest, and Go suites; supports explicitly enabled bot-owned Node tests and attested JUnit imports. | [Execution](docs/execution.md) · [Authored tests and CI imports](docs/releases.md) |
+| Web UI and APIs | Checks configured journeys, API responses, accessibility, keyboard interactions, responsive layouts, resources, and visual changes. | [Product QA](docs/product-qa.md) · [Autonomous QA](docs/autonomous-qa.md) |
+| AI investigation | Uses bounded specialist tool loops for planning, code/security/UI observations, failure diagnosis, and suggested fixes or test candidates. | [OpenRouter and local models](docs/ai.md) |
+| Builds and releases | Runs configured release suites and checks evidence against the source revision, build/version, platform, and artifact digest before deployment. | [Release QA and gates](docs/releases.md) |
+| Native applications | Runs declared Appium journeys on separately enrolled disposable devices or VMs. | [Native QA](docs/native-qa.md); protocol fixtures do not validate real devices. |
+| Reports and team updates | Records results, failure evidence, limitations, and targeted questions; optionally publishes GitHub metadata, Slack updates, and Drive reports. | [Controller integrations](docs/github-controller.md#configure-integrations) · [Team operations](docs/team-operations.md) |
+
+Browser execution supports Chromium, Firefox, and WebKit. Visual comparisons need approved baselines, and meaningful journey/API checks need product-specific expectations. A full-release run covers the **configured release suite**; it does not imply exhaustive product coverage.
+
+## How an assessment works
+
+1. **Identify the target.** Bind the assessment to a committed revision and, for builds/releases, the artifact and version being shipped.
+2. **Plan and execute.** Select trusted checks, run them in the enrolled environment, and collect structured outcomes and bounded evidence.
+3. **Investigate failures.** Optionally use AI specialists to inspect code and results, propose fixes, and surface questions that need an authorized person.
+4. **Report the decision.** Show what passed, failed, was skipped, or remains untested. Required failures, missing/stale evidence, and unresolved mandatory decisions prevent approval.
+
+AI summaries and ordinary GitHub approvals cannot override failed required checks. Patchsentry suggests code changes; it does not edit, push, merge, or deploy connected product code.
+
+## Three repositories, one product
 
 | Repository | Responsibility |
 | --- | --- |
-| [patchsentry-web](https://github.com/Vaidehi2510/patchsentry-web) | Main product overview, account/project website, model setup, hosted queue, current reports and release policy. Start here to explore the product. |
-| **QA-testbot (this repository)** | Executable QA engine, isolated test runners, browser/native adapters and deterministic no-key demonstrations. Start here to reproduce the fixture result. |
-| [Patchsentry-Ledger-Java](https://github.com/Vaidehi2510/Patchsentry-Ledger-Java) | Optional Java assessment archive. The website has a scoped archive adapter; a company must deploy and connect its service before remote archival is available. It is not required for this demo. |
+| [patchsentry-web](https://github.com/Vaidehi2510/patchsentry-web) | Website, accounts, projects, model setup, hosted queue, reports, and release policies. Start here to use the product. |
+| **[QA-testbot](https://github.com/Vaidehi2510/QA-testbot)** | This engine: planning, test execution, browser/native adapters, local model dashboard, and reproducible demos. |
+| [Patchsentry-Ledger-Java](https://github.com/Vaidehi2510/Patchsentry-Ledger-Java) | Optional Java assessment archive. Deploy and connect your own service through the website’s project-scoped adapter to use remote archival. |
 
-The website can dispatch supported hosted web QA without a customer-managed runner. An explicitly enrolled outbound runner is optional for authorized private-network, local-model or native environments. Business expectations, approved test environments, provider access and budgets remain operator-controlled. [Architecture and setup](https://patchsentry.vercel.app/architecture).
+The website can dispatch supported hosted web QA without a customer-managed runner. Private-network, local-model, and native environments use separately enrolled infrastructure. The Ledger service is optional and is not deployed by this demo. See the [product architecture](https://patchsentry.vercel.app/architecture).
 
-## Supported execution and boundaries
+## Choose an AI backend
 
-The optional **OpenRouter or local AI team** supports test planning, code review, security observations, UI/UX observations and failure triage. Models inspect bounded context and propose findings or candidate tests; a model summary cannot override failed deterministic assertions. Generated fixes remain suggestions. No tool edits, pushes or merges connected product source. Bot state, external test suites and reports stay in its separate workspace. See [testing a product without code changes](docs/product-qa.md).
-
-The [autonomous QA runner](docs/autonomous-qa.md) adds bounded browser discovery, declarative regression journeys grounded in trusted assertions, independent replay and approved visual baselines. Chromium, Firefox and WebKit are selectable. The [release runner](docs/releases.md) binds evidence to source, build/platform/version and artifact bytes; skipped, missing, stale or failed required checks cannot count as passed. The portal also supports an owner-scoped authored-test library and attested CI imports.
-
-The [native adapter](docs/native-qa.md) needs an explicitly enrolled Appium server and disposable application/device environment. Real device-provider interoperability, live AI diagnosis quality, customer defect recall and human-work savings require separate validation. Passing this controlled fixture does not establish full-product coverage or replacement of every QA responsibility. See the [verification and limitations record](https://github.com/Vaidehi2510/patchsentry-web/blob/main/docs/enterprise-verification.md).
-
-QA completes for a tested revision when every required automated check passes and any specifically required owner question is resolved. Ordinary GitHub approvals do not override a failed check. The [MIT license](LICENSE) covers this project's code; dependency licenses remain their own.
-
-## Run locally
-
-Use Node.js **24** to match CI (the package minimum is 22.17). The demos need no credentials or model calls. Install the locked public dependencies before running further checks:
+AI is optional and disabled in the shipped configuration. To explore the specialist workflow with scripted model replies and real fixture assertions:
 
 ```sh
-npm ci --ignore-scripts
-npm run demo
 npm run demo:ai
-npm test
 ```
 
-The full test suite also uses Git, Python 3, and the standard `zip`/`unzip` utilities for revision and archive-safety checks. The demo itself needs only Node and npm.
-
-The demo copies a synthetic shipping application into temporary directories and runs **real tests**. It demonstrates automatic completion, a deliberately broken shipping boundary with assertion evidence, a targeted owner question and recorded response, a Drive report preview, Slack notifications, and a new commit invalidating previous results and decisions. Every external operation is explicitly marked **MOCK**. Temporary state and evidence are removed afterward. The local fixture process is trusted demo code; untrusted PRs run only in containers.
-
-The AI demo uses the real tool loop and OpenRouter adapter with explicitly **mocked model responses**. Its fixture tests really execute and catch a shipping defect; an AI summary cannot override that failure. It also exercises cited code/UI findings, proposed test source, budget accounting, and deduplicated reviews. No API key or network is used.
-
-To browse the live model catalog and configure your team:
+To choose models for live reviews, start the **local engine dashboard**:
 
 ```sh
 npm run dashboard
 ```
 
-Open **http://127.0.0.1:8787**. Catalog browsing needs no key. Select models, enable AI, and save configuration. For a live review, set `OPENROUTER_API_KEY` in your terminal environment, then run:
+Open **http://127.0.0.1:8787**. This dashboard configures the engine on your machine; hosted account/project setup belongs on the [website](https://patchsentry.vercel.app).
+
+| Backend | What you provide |
+| --- | --- |
+| **OpenRouter** | Browse its public model catalog without a key. For inference, provide `OPENROUTER_API_KEY` through your terminal’s secret manager/environment, select eligible models, enable AI, and save configuration. |
+| **Local server** | Start a compatible server such as Ollama or LM Studio, select **Local server**, and configure its literal loopback `/v1` address and model capability profile. Use `LOCAL_MODEL_API_KEY` only if that server requires authentication. |
+
+Local examples are `http://127.0.0.1:11434/v1` and `http://127.0.0.1:1234/v1`. Profiles must declare context limits and tool support; screenshot review also requires image support. The bot does not download models or start the server. Local mode has no OpenRouter fallback.
+
+Keys stay in the server/CLI environment, outside configuration and browser code. Selected source excerpts and opted-in screenshots go to the configured backend. Review [privacy, capability, and budget controls](docs/ai.md) before enabling live calls.
+
+With models configured and any required credential available, review **committed** product changes:
 
 ```sh
 npm run review -- --repo /path/to/product --base main --head HEAD
 ```
 
-This command reviews committed Git revisions and saves a local report. Add `--web-suite examples/web-suite.json` to run a bot-owned browser suite against your disposable preview. Configure the suite for your product first. Without that option, the command does not launch tests. Add `--dry-run` to preview without model calls or saved state. See [AI setup and limits](docs/ai.md), [dashboard instructions](docs/dashboard.md), and [test execution](docs/execution.md).
+This saves a local report; it does not execute product tests by itself. Configure and supply `--web-suite /path/to/trusted-suite.json` for browser execution, or attach supported revision-bound results. `--dry-run` previews without model calls or saved state. See [review inputs](docs/ai.md#review-a-local-product) and [dashboard setup](docs/dashboard.md).
 
-For a separately configured GitHub App controller's client dependencies:
+## Connect a product safely
 
-```sh
-npm ci --ignore-scripts
-```
-
-`package-lock.json` pins the dependency tree. No credentials or production activation are included.
-
-## Optional GitHub App controller
-
-The separate GitHub App workflow below is an optional integration path. **The QA controller in this repository is currently disabled** (verified October 31, 2026). The cron expression in its source does not mean it is running. The no-key demo and the website's separately configured hosted flow do not enable this controller. An authorized operator must configure and explicitly enable it for an installation.
-
-```mermaid
-flowchart LR
-    PR[Target PR: SHA, patches, description, specs, tests] --> Plan[Deterministic baseline plan]
-    Plan --> AI[Optional AI specialists: inspect and select trusted suites]
-    AI --> State[Durable state and execution request]
-    State --> Prepare[Separate prepare job: download exact source]
-    Prepare --> Test[Secret-free executor: network-isolated container]
-    Test --> Results[Structured results and evidence artifact]
-    Results --> Complete[workflow_run completion controller]
-    Complete --> Final[AI final review: results, code, optional screenshots]
-    Complete --> Slack[Prompt test completion]
-    Final --> SlackFinal[Final findings and targeted questions]
-    Complete --> Drive[Drive current summary and run history]
-    Decision[Authorized GitHub decision comment] --> State
-    Poll[Optional 10-minute reconciliation] --> State
-```
-
-For this optional controller path, the target application needs a supported suite or runnable preview and installation of the configured GitHub App. Bot source, controller workflows and Slack/Drive credentials stay outside the product repository. **When the controller is configured and enabled**, its ten-minute reconciliation discovers new PR revisions/comments and `workflow_run` handles execution completion. Optional Slack delivery precedes Drive I/O; a later message can supply an upload link. None of those external deliveries occurs in the reviewer demo.
-
-The privileged controller checks out reviewed bot code. A separate prepare job downloads an exact commit archive as data. The executor uses a fresh GitHub-hosted runner and runs PR code in containers with no network, integration credentials, Docker socket, writable source mount, or privileged capabilities. Bot-owned preview tests use a separate bounded browser process with Chromium sandboxing, fresh contexts, and an explicit preview-origin policy; no target scripts are launched by that worker. The privileged collector reads bounded JSON and optional validated screenshot bytes from an artifact; it never extracts or executes that artifact's code. See [execution details](docs/execution.md).
-
-## Planning and supported tests
-
-`src/planner.js` combines changed paths, added/removed patch content, PR descriptions, configured specification files, and the path/content of existing tests. Each check has a stable ID, reason, expected result, execution method, and supporting files/requirements. The fingerprint includes the exact SHA and inspected inputs, so a new commit with identical filenames is reassessed.
-
-`qa-rules.json` supplies feature journeys and scenario expectations. `qa-config.json` supplies the **trusted runner allowlist**. PR content cannot specify commands or credentials. An essential baseline always runs, with additional suites selected using `match`, `patchMatch`, and `requirementMatch` regular expressions. The shipped feature rules reference example runner IDs such as `auth-tests` and `api-tests`: configure these for your application. A selected but unconfigured scenario is explicitly **blocked**, never assumed covered by the baseline.
-
-Initial runners:
-
-| Type | Intended target | Required output |
-| --- | --- | --- |
-| `node-test` | Node built-in tests, explicit files or relative globs | TAP produced by `node --test --test-reporter=tap` |
-| `npm-script` | A trusted named npm script running the application's suite | Complete TAP, `format: "tap"` |
-| `npm-script` with `format: "vitest-json"` | Existing Vitest suite, optionally in a configured relative `cwd` | Complete JSON with consistent assertion counts |
-| `go-test` | Trusted relative Go package paths | Completed `go test -json` package and test events |
-| `web-preview` | Bot-owned UI suite against an exact-revision disposable preview | Browser assertions, discovery, accessibility/layout findings, screenshots and optional visual differences |
-
-An example additional runner:
-
-```json
-{
-  "id": "auth-tests",
-  "type": "node-test",
-  "files": ["test/auth/*.test.js"],
-  "match": ["auth", "session"],
-  "patchMatch": ["[+-].*permission"],
-  "timeoutMs": 60000,
-  "expected": "Valid sessions succeed; expired sessions and forbidden roles are rejected.",
-  "requirement": "specs/access-policy.md"
-}
-```
-
-The default image supports dependency-free Node tests. Projects with dependencies need a reviewed image containing those dependencies at `/opt/qa/node_modules`; Go suites need their toolchain and cached modules in the image. Configure `execution.image`, preferably with an immutable digest. No install hook runs against PR code with privileged credentials. Opt-in `execution.scratchWorktree` supports framework build files and ESM resolution in a disposable container copy while preserving the read-only source mount. Service containers, production data, and external network calls remain unsupported. Locally attested JUnit imports and explicitly enrolled authored Node tests are described in [build/release QA](docs/releases.md). Details are in [test execution](docs/execution.md) and [autonomous QA](docs/autonomous-qa.md).
-
-Patch analysis identifies validation, authentication, authorization, error handling, and dynamic execution observations. These are heuristics, not a security audit or proof of correctness. Missing expectations, explicit `TBD`/`open question` text, and findings requiring interpretation produce targeted human checks. Default CSS changes select automated browser coverage rather than imposing routine manual visual sign-off. Contradictions can be made machine-detectable with `QA-EXPECT key: value` lines in descriptions/specs: different values for the same key create an owner question. The deterministic planner does not interpret arbitrary prose contradictions; optional AI reviewers can propose additional questions with explicit uncertainty. Test association is heuristic and gaps are included in reports. Generated source-code tests remain inert candidates. The autonomous path can execute validated declarative journeys and retain them after two verified passes, preserving operator-owned assertions. The bot never executes model-supplied commands or silently applies suggested product fixes.
-
-For a check needing separately authorized access or external side effects, add a rule scenario with `method: "human"`, `kind: "access"`, a specific `question`, `reason`, and `expected` result. The request asks the configured owner to provide an authorized test result and evidence; the bot never grants itself external access or runs that action through a comment.
-
-Configured specs are read at the PR SHA. Large/truncated file lists, trees, inaccessible specs, and incomplete inspection become visible limitations and required blocked checks. At most 40 existing test files are inspected to bound API usage; tune this implementation for large repositories rather than silently asserting complete coverage.
-
-## Configure integrations
-
-Configuration is reviewed in the **bot repository**:
+For the optional GitHub App controller, maintain reviewed configuration in a **separate bot repository**:
 
 | File | Purpose |
 | --- | --- |
-| `qa-config.json` | AI models and limits, scope, runners, environment, owners, retry bounds, Drive destination, state branch, trusted workflow ref |
-| `qa-rules.json` | Feature rules, regression expectations, human scenarios |
-| `people.json` | Verified GitHub-to-Slack mapping only; not a review roster |
+| [qa-config.json](qa-config.json) | Scope, trusted runners, AI models/limits, owners, execution settings, and integration destinations. |
+| [qa-rules.json](qa-rules.json) | Feature expectations, regression scenarios, and specific human questions. |
+| [people.json](people.json) | Verified GitHub-to-Slack identities; this is not an authorization roster. |
 
-Set `scope.prNumbers` to specific PR numbers, or use `PR_NUMBER` to select one PR without needing a label. Otherwise the default scope is PRs labeled `needs-qa`; set `scope.milestone` to select a release instead. Previously tracked PRs remain tracked after the completion label replaces `needs-qa`. `qa-complete` is based on results and decisions. The SHA-bound `qa-bot` commit status is the authoritative merge check; labels are a reconciled convenience and cannot be atomically updated with a concurrent force-push.
+Product contents are read-only. A separately authorized GitHub App can post PR comments, labels, and exact-SHA statuses with `targetAccess: "report-status"`; `"read-only"` also disables those metadata writes. Keep private target information in a private bot workspace because state, reports, and artifacts contain target details.
 
-Protect the bot default branch, the `qa-state` branch, and the **`qa-control` GitHub environment**. Restrict the environment's deployment branches to reviewed bot refs and allow the controller to write state. Do not add a per-run manual environment approval if automatic unattended testing is intended. Use a private bot repository when target code, reports, or evidence are private; state and Actions artifacts contain target information. Set `executionRef` to the trusted bot branch (default `main`).
+Untrusted Node/npm/Go tests run in offline, resource-limited Docker containers without integration credentials or a writable source mount. Preview browsers use a separate sandboxed worker and enrolled origin/network policy. Native checks require their own isolated device environment. Trusted dependencies and test images must be prepared before execution.
 
-Create and install a GitHub App on the target repository with:
+The shipped configuration has `enabled: false` and `ai.enabled: false`. The public controller was verified disabled on November 10, 2026; its cron expression alone does not indicate activation. Follow the [controller setup and operations guide](docs/github-controller.md) for permissions, secrets, Slack/Drive delivery, activation, reruns, and recovery.
 
-- Metadata, Contents, and Pull requests **read**.
-- Issues **read/write** for QA comments and labels (Pull requests read/write if required by your organization for PR comments).
-- Commit statuses **read/write** for the exact-SHA `qa-bot` status.
+## Verification and current limits
 
-The bot repository's `GITHUB_TOKEN` needs Contents write for state/request persistence and Actions write for dispatch and artifact reads. App credentials are separate from that token. No target Contents write, workflow write, commit push, or merge permission is needed. Keep `targetAccess: "report-status"` to post comments, labels, and statuses; `"read-only"` disables those metadata writes too. The controller rejects using the same repository for the product and bot state.
+After installing dependencies, run the local suite:
 
-Configure secrets/variables in the protected `qa-control` environment or bot repository:
-
-| Name | Kind | Use |
-| --- | --- | --- |
-| `OPENROUTER_API_KEY` | Secret | Optional hosted AI calls; only in the privileged controller |
-| `LOCAL_MODEL_API_KEY` | Secret | Optional authentication to the chosen local model server |
-| `QA_CONTROLLER_RUNNER` | Variable | Optional dedicated controller runner label for a local model server; default `ubuntu-latest` |
-| `QA_APP_ID`, `QA_APP_PRIVATE_KEY` | Secrets | Target GitHub App |
-| `TARGET_OWNER`, `TARGET_REPO` | Variables | Target repository |
-| `SLACK_WEBHOOK_URL` | Secret | Incoming webhook for the QA channel |
-| `SLACK_BOT_TOKEN` | Secret | Optional bot transport; requires the channel variable |
-| `SLACK_CHANNEL_ID` | Variable | QA channel for the optional bot transport |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Secret | Google service account for a Workspace Shared Drive |
-| `GOOGLE_DRIVE_ACCESS_TOKEN` | Secret | Alternative OAuth access token; expires and must be refreshed |
-| `DRIVE_FOLDER_ID` | Variable | Report root; overrides `drive.folderId` |
-| `DRIVE_SHARED_DRIVE_ID` | Variable | Optional Shared Drive ID; overrides `drive.sharedDriveId` |
-| `QA_ENABLED` | Variable | Default `false`; explicit activation gate |
-| `DRY_RUN` | Variable | Defaults to `true`; `false` is required for external writes |
-
-Local dashboard selections update `qa-config.json`. Commit that reviewed configuration to the bot repository to use it in Actions, and configure the OpenRouter secret in the protected environment. AI enablement and production activation are separate; both remain off in the shipped configuration. The selected backend receives source excerpts and opted-in screenshots. OpenRouter forwards them to its selected provider; local mode sends only to the configured loopback model endpoint and has no OpenRouter fallback. See [privacy and cost controls](docs/ai.md).
-
-For local `npm run sync`, use `APP_ID`/`APP_PRIVATE_KEY` (or `QA_APP_ID`/`QA_APP_PRIVATE_KEY`), `TARGET_OWNER`, `TARGET_REPO`, `BOT_REPOSITORY=owner/bot`, and a bot-scoped `GITHUB_TOKEN`. Set `DRY_RUN=true` first. Dry-run may read GitHub to construct plans, but it previews writes and does not persist dedupe state, send Slack messages, upload Drive files, change GitHub state, or dispatch workflows. `npm run demo` is the fully offline alternative.
-
-### Google Drive
-
-Enable the Drive API in your Google Cloud project. Configure one existing report root folder and grant only the required writer access to the bot identity. The adapter creates:
-
-```text
-configured-root/
-  owner_repo/
-    PR-123/
-      current.md
-      run-<logical-id>-attempt-<n>-actions-<run>-<attempt>-<revision>.md
+```sh
+npm test
 ```
 
-Reports contain the PR identity, tested revision/environment, plan, results, actual test counts, static observations, bounded evidence, skipped/untested checks, questions, decisions, outcome, and limitations. Individual logical runs and Actions attempts have distinct history files. `current.md` is updated only by the current assessment. No ACL or public-link API is called: sharing is inherited from the configured destination.
+The suite also needs Git, Python 3, and `zip`/`unzip`. Node.js 24 matches CI; the package minimum is 22.17. Browser and Docker integrations require their explicit flags, installed browsers, and prepared images; an ordinary local run can skip them. Use the [full verification recipe](docs/reviewer-quickstart.md#4-reproduce-broader-engine-verification-separately) or [CI workflow](.github/workflows/check.yml) to run those checks.
 
-For **Workspace Shared Drives**, add the service account as a member with permission to create folders and files, and provide both root folder ID and Shared Drive ID. The adapter uses `supportsAllDrives`, `includeItemsFromAllDrives`, and the configured Drive corpus. Service accounts do not have personal My Drive storage quota; use a Shared Drive for this mode.
+Controlled verification includes real browser-engine fixtures, offline Go/Vitest containers, revision invalidation, artifact identity, failure classification, and source read-only checks. AI/provider and native-protocol fixtures exercise interfaces; they do not establish live model accuracy or physical-device interoperability.
 
-For a **shared My Drive folder**, use user OAuth and explicitly grant the app access to the selected folder (for example, using Google Picker). The adapter accepts an OAuth access token or, programmatically, a `getAccessToken` callback. The callback can integrate your refresh-token store; the CLI's fixed access-token mode does not refresh automatically. Both modes use `drive.file` access. Service-account JWT exchange and refresh are built in; domain-wide impersonation is not implemented.
+Customer-specific provider access, real-device execution, workload defect recall, production capacity, and independent security review still need their own evidence. Passing tests does not establish a code-coverage percentage, staffing savings, or replacement of every QA responsibility. The [enterprise verification record](https://github.com/Vaidehi2510/patchsentry-web/blob/main/docs/enterprise-verification.md) tracks measured results and remaining dependencies.
 
-Uploads use managed identity properties and checkpoint reserved file IDs before creation, allowing retries after an interrupted response without duplicating files. If Drive fails, retained markdown, upload IDs, and bounded retry state remain in `qa-state`. Test status is unchanged. Refer to Google's [service-account authentication](https://developers.google.com/identity/protocols/oauth2/service-account), [file authorization](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), and [Shared Drive support](https://developers.google.com/workspace/drive/api/guides/enable-shareddrives).
+## Documentation and contribution
 
-### Slack and human decisions
+- **First run:** [Reviewer quick-start](docs/reviewer-quickstart.md).
+- **Test a product:** [Read-only product QA](docs/product-qa.md), [execution isolation](docs/execution.md), [autonomous browser QA](docs/autonomous-qa.md), and [release gates](docs/releases.md).
+- **Models and teams:** [AI configuration](docs/ai.md), [local dashboard](docs/dashboard.md), [team operations](docs/team-operations.md), and [native environments](docs/native-qa.md).
+- **Operate the controller:** [GitHub, Slack, Drive, state, and recovery](docs/github-controller.md).
+- **Contribute:** [Contribution guide](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), and [open issues](https://github.com/Vaidehi2510/QA-testbot/issues).
+- **Report vulnerabilities privately:** [Security policy](SECURITY.md).
 
-Create an incoming webhook bound to the QA channel, or use a bot token with `chat:write` and a channel ID. The existing webhook capability is retained. Incoming webhooks append messages; they do not return a message timestamp for later updates. This implementation posts a follow-up when a report becomes available. Bot transport returns a timestamp and supplies a stable client message ID, but updates and interactive buttons are not implemented. See [Slack's webhook documentation](https://api.slack.com/messaging/webhooks).
-
-Only independently verified Slack member IDs are used:
-
-```json
-[
-  { "github": "feature-owner", "slackId": "U0123456789", "verified": true }
-]
-```
-
-Add those GitHub logins to `featureOwners` by the exact rule area label, or to `decisionReviewers`. Set `qaGroupId` to a verified Slack user-group ID such as `S0123456789`. The bot selects the owner/reviewer, includes the author for implementation questions, and falls back to the author and/or QA group when appropriate. It never guesses identity from display names or contacts people simply because they appear in the directory. Slack identity mapping does not itself authorize a decision.
-
-Each request includes the check, revision, question, reason, and response instructions. An authorized person responds on the PR using a **new single-line GitHub comment**:
-
-```text
-/qa-tested check:requirements-clarification revision:<full-40-character-SHA> result:pass reason:The intended threshold uses post-discount subtotal; verified this revision against the accepted specification.
-```
-
-Use `result:fail` when the check is unsatisfactory. The GitHub account must be a configured feature owner or decision reviewer. The PR author may resolve an `implementation` question, but cannot approve a requirement, visual judgment, or security interpretation solely by being the author. Each accepted decision records responder, explanation, timestamp, comment ID, check ID, and SHA. Acknowledgments, ordinary reviews, missing reasons, stale SHAs, pre-assessment comments, and unauthorized comments do not resolve checks. Editing an already processed comment does not revise a decision; post a new comment. A decision cannot override a failed or unsupported automated check.
-
-Only affected human checks wait. Independent automation continues. When automated checks pass and only a mandatory human decision remains, Slack says exactly: **“Automated checks passed; human QA review pending.”** When no required decision remains and checks pass, QA completes automatically. For an enabled GitHub-controller installation, responses are reconciled on the next configured scan.
-
-## State, reruns, and recovery
-
-`qa-state/state.json` holds current PR pointers, run and attempt history, decisions, requests, notification receipts, report IDs, retained report text, and an integration outbox. Immutable `requests/<key>.json` files are persisted before dispatch. GitHub Contents updates use SHA compare-and-swap, a 20-minute durable lease, and a workflow concurrency group. A conflict aborts before side effects; the next reconciliation retries. The controller job's ten-minute timeout is shorter than the lease. Do not run controllers that bypass this lease against the same state.
-
-Normal repeated events reuse the assessment. A new SHA or changed planning input creates a fresh assessment and invalidates old decisions without deleting history. Late artifacts can update historical reports but cannot replace the current assessment. Every artifact must match repository, PR, SHA, environment, logical run, and Actions attempt. Missing reports, zero tests, malformed TAP, canceled jobs, unsupported tests, and timeouts never report successful QA. Supplied summaries cannot override results.
-
-For a configured installation whose controller has been explicitly enabled, use **Run workflow → QA controller** with `rerun_token` set to a unique value for an intentional rerun; optionally specify `pr_number` to scope that rerun. Reusing the token deduplicates delivery. GitHub's native Actions rerun is also supported: each Actions attempt has a separate result artifact and historical report. Rerunning after modifying trusted runner configuration creates a new assessment. New metadata/requirement assessments conservatively require new human decisions, even at the same SHA.
-
-External delivery attempts are persisted before calls. Exponential retry delays are bounded at one hour, with five attempts by default. Set manual `retry_integrations=true` after correcting an exhausted integration. This resets exhausted delivery attempts without inventing passing test results. A controller restart rediscovers dispatched workflow IDs by request key, reads completed artifacts, and retries pending uploads/messages. A lost HTTP response from a Slack webhook or workflow dispatch can still cause a rare duplicate external delivery; durable receipts prevent ordinary duplicates, and duplicate workflow results do not overwrite the selected run. Neither API supplies a general transaction with the bot's state store.
-
-The result collector accepts up to 16 MiB compressed artifact data, 2 MiB JSON, and four validated screenshots totaling at most 6 MiB, never executes artifact content, and uses attempt-specific names. Logs expire after 30 days and source bundles after one day; report text and bounded failure evidence persist in state and Drive. State history is retained without automatic deletion; for large installations, plan state archival/storage migration before approaching GitHub's file-size limits.
-
-For local `FileStore` use, writes are atomic and protected by `state.lock`. If a process crashes, stop all local workers before removing a leftover lock and restarting. Corrupt state fails closed; it is never silently replaced. Restore the state branch from its Git history if needed. Do not remove state to resolve an integration outage: doing so loses dedupe and decision history.
-
-## Implementation map and verification
-
-| Files | Responsibility |
-| --- | --- |
-| `src/ai/` | OpenRouter/local adapters, bounded specialist tool loops, source snapshots, model settings, review coordination and CLI |
-| `src/web/`, `examples/web-suite.json` | Bot-owned browser audits, preview journeys, revision-bound screenshots and real browser demo |
-| `src/dashboard.js`, `ui/` | Local model catalog, team configuration and review activity |
-| `src/planner.js`, `src/core.js`, `src/decisions.js` | Plans, truthful outcomes, routing and decision authorization |
-| `src/run.js`, `src/lifecycle.js`, `src/state.js` | Controller, revisions, persistence and retry outbox |
-| `src/github.js`, `src/dispatch.js` | App reads, comments, statuses, Actions dispatch/result collection |
-| `src/executor.js`, `src/execute.js`, `src/prepare-execution.js`, `src/unpack-source.py` | Trusted execution request, isolated tests and evidence |
-| `src/drive.js`, `src/report.js`, `src/slack.js` | Reports, uploads, completion and question notifications |
-| `.github/workflows/qa-control.yml`, `.github/workflows/qa-execute.yml` | Completion-driven controller and isolated jobs |
-| `fixtures/tiny-app`, `test`, `src/demo.js` | Defect-detecting fixture, meaningful tests, offline demo |
-
-Tests cover structured outcomes, unauthorized/stale decisions, verified routing, duplicate events, persisted/concurrent state, retry exhaustion, Drive/Slack failures, dry-run writes, archive safety, test timeouts, and intentional fixture defects. AI tests additionally cover mocked provider/tool calls, citations, model capabilities, budget limits, privacy settings, crash recovery, result integrity, screenshot boundaries, and dashboard HTTP security.
-
-Real Chromium, Firefox, and WebKit fixtures verify browser journeys, visual regressions, discovery, selector maintenance, and redirect containment. Real Docker fixtures verify Go and Vitest results with an offline container and unchanged source files. Browser timeout fixtures also verify cleanup of detached and partially launched browser processes. The public OpenRouter catalog and local dashboard were checked live; paid inference was not exercised. Local model calls use mocked compatibility tests; no model was downloaded or benchmarked. The native adapter has protocol-level fixture coverage, but no real device or native application has been validated.
-
-Product-specific GitHub App installation, Slack delivery, Google permissions, actual model quality, preview deployment provenance, and native devices still require validation in an authorized staging setup. Passing controlled fixtures does not establish code coverage or complete QA coverage for an integrated product.
-
-Release verification additionally covers exact-artifact browser headers, complete-version CI imports without PR numbers, changed build/test inputs, deployment-gate freshness and policy checks, and offline authored tests that catch a synthetic boundary defect while preserving the source mount. These fixtures do not establish universal real-device compatibility or commercial benchmark superiority.
-
-Product teams, optional Slack updates, roles/invitations, recording, parallel workers and enrolled device pools: [team operations guide](docs/team-operations.md). Device infrastructure remains separately provisioned.
+Reproducibility reports, failing synthetic regressions, accessibility feedback, and documentation improvements are welcome. You can contribute without an AI key or a company repository.
 
 ## License
 
-Licensed under the [MIT License](LICENSE). Copyright (c) 2026 Vaidehi Pandya.
+[MIT](LICENSE) · Copyright (c) 2026 Vaidehi Pandya. Dependencies retain their own licenses.

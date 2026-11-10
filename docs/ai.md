@@ -146,7 +146,7 @@ Default provider settings are `data_collection: "deny"`, `allow_fallbacks: false
 
 Before each paid request, the coordinator persists a call and conservative cost reservation. Reservations include tool schemas and output limits; vision requests reserve the model's full available input context because image tokenization differs among models. This can exhaust a small budget even when the eventual billed amount would be lower. Reports distinguish provider-reported costs from estimates. Price caps accompany requests; additional calls stop on exhausted limits or inconsistent reported costs. Use an OpenRouter key spending limit as an additional account-level control.
 
-For GitHub integration, commit the reviewed settings to the bot repository and configure `OPENROUTER_API_KEY` in its protected `qa-control` environment. The key is passed only to the controller, never to the job executing PR code. Configure trusted runners, target GitHub App, Slack, Drive, and owners as described in the [README](../README.md). Production activation remains a separate explicit deployment step.
+For GitHub integration, commit the reviewed settings to the bot repository and configure `OPENROUTER_API_KEY` in its protected `qa-control` environment. The key is passed only to the controller, never to the job executing PR code. Configure trusted runners, target GitHub App, Slack, Drive, and owners as described in the [controller guide](github-controller.md). Production activation remains a separate explicit deployment step.
 
 ## Evidence, privacy, and recovery boundaries
 
